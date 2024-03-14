@@ -3,8 +3,11 @@ import sys
 import sql
 from datetime import datetime
 from math import ceil
+import telebot
 # import time
 
+def send(id, bot):
+    bot.send_message(id, "Hello")
 
 def init():
     if not os.path.exists("User"):

@@ -1,19 +1,24 @@
+# TODO:
+#   examples
+#   check if non active
+#   refactoring
+
 import telebot
 import os
+import reminder
+import book_parser
 import tools
 import sql
 import urllib.request
 from telebot import types
 from threading import Thread
-import time
-import schedule
 
+print("start")
 tools.init()
 TOKEN = tools.get_token()
-bot = telebot.TeleBot(TOKEN, parse_mode="HTML", threaded=False)
+bot = telebot.TeleBot(TOKEN, parse_mode="HTML")
 userlist = sql.get_user_id_list()
 bot_info = bot.get_me()
-print("bot started")
 
 
 @bot.message_handler(commands=["debug"])
@@ -32,9 +37,10 @@ def response(message):
     bot.reply_to(message, {True: ru, False: eng}[lang == 'ru'])
     id = message.chat.id
     chat = bot.get_chat(id)
-    #print(type(message))
-    #print(chat)
-    #print(type(chat))
+    user = message.from_user
+    bot.send_message(id, user.language_code)
+    sql.update_text(id, field='language', value=lang)
+
 
 @bot.message_handler(commands=["start"])
 def beginning(message):
@@ -57,15 +63,12 @@ def beginning(message):
     else:
         bot.send_message(id, "Hello, dear friend. Upload a *.txt file to get started", reply_markup=markup)
 
-
     isNew = not (id in userlist)
-    if isNew == True:
+    if isNew:
         folder = os.path.join("User", str(id))
         if not os.path.exists(folder):
             os.makedirs(folder)
-
         sql.add_new_user(id)
-        sql.update(id, field='language', value=user.language_code)
         userlist.append(id)
         tools.log("user " + str(id) + " has been created")
 
@@ -75,6 +78,8 @@ def beginning(message):
         f.write("username: " + str(user.username) + "\n")
         f.close()
 
+    sql.update_text(id, field='language', value=user.language_code)
+
 
 @bot.message_handler(commands=["next"])
 def next_page(message):
@@ -83,34 +88,8 @@ def next_page(message):
     if user_not_found(user, id):
         return
 
-    isOpen, pos, shift, freq = sql.get_data(id)
-    if isOpen == 0:
-        if user.language_code == "ru":
-            bot.send_message(id, "Файл не обнаружен. Пожалуйста, попробуйте загрузить снова")
-        else:
-            bot.send_message(id, "File not found. Please, try uploading again")
-        return
-
-    path = tools.get_current_path(id)
-    book = tools.get_book(path)
-
-    size_N = len(book)
-    if pos > size_N:
-        if user.language_code == "ru":
-            bot.send_message(id, "Текст закончился")
-        else:
-            bot.send_message(id, "Text is over")
-        return
-
-    end_pos = pos + shift
-    pages_read = tools.how_much_read(end_pos, size_N, shift)
-
-    text = book[pos: end_pos] + "\n" + pages_read
+    text = book_parser.next_page(id)
     bot.send_message(id, text)
-    sql.update(id=id, field="position", value=end_pos)
-
-
-
 
 
 @bot.message_handler(content_types=["document"])
@@ -193,119 +172,31 @@ def inline_buttons(message):
         next_page(message)
 
 
-
 def set_page_number(message):
     id = message.chat.id
-    lang = message.from_user.language_code
-    isOpen, pos, shift, freq = sql.get_data(id)
-    if isOpen == 1:
-        n = tools.to_int(message.text)
-        if n == -1:
-            ru, eng = "Ты че вводишь, алё", "It is nonsense"
-            bot.send_message(message.chat.id, {True: ru, False: eng}[lang == 'ru'])
-        else:
-            pos = n * shift
-            sql.update(id=id, field="position", value=pos)
-            path = tools.get_current_path(id)
-            book = tools.get_book(path)
-            size_N = len(book)
-            ru, eng = "Страница ", "Page "
-            text = {True: ru, False: eng}[lang == 'ru'] + tools.how_much_read(pos, size_N, shift)
-            bot.send_message(id, text)
+    input = message.text
+    text = book_parser.set_page_number(id, input)
+    bot.send_message(id, text)
 
 
 def set_page_size(message):
     id = message.chat.id
-    isOpen, pos, shift, freq = sql.get_data(id)
-    n = tools.to_int(message.text)
-    lang = message.from_user.language_code
-    if n == -1:
-        ru, eng = "Доброе утро, че вводишь?", "Wtf are you trying to do?"
-        bot.send_message(message.chat.id, {True: ru, False: eng}[lang == 'ru'])
-    elif n > 4000:
-        ru, eng = "Вы читать не умеете? (Зачем вам этот бот?) 4000 - максимум", "Can you read? 4000 is the maximum"
-        bot.send_message(message.chat.id, {True: ru, False: eng}[lang == 'ru'])
-    elif n < 20:
-        ru, eng = "Ха-ха-ха, очень смешно", "Yeah, very funny"
-        bot.send_message(message.chat.id, {True: ru, False: eng}[lang == 'ru'])
-    else:
-        sql.update(id=id, field="pagesize", value=n)
-        ru, eng = ("Текущий размер страницы " + str(n) + " символов",
-                   "Current page size is " + str(n) + " symbols")
-        bot.send_message(message.chat.id, {True: ru, False: eng}[lang == 'ru'])
+    input = message.text
+    text = book_parser.set_page_size(id, input)
+    bot.send_message(id, text)
+
 
 def set_page_by_phrase(message):
     id = message.chat.id
-    isOpen, pos, shift, freq = sql.get_data(id)
-
-    if isOpen == 1:
-        w = (message.text).lower()
-
-        if len(w) > 1:
-            path = tools.get_current_path(id)
-            book = tools.get_book(path)
-            lc = book.lower()
-            pos = lc.find(w)
-
-            if pos == -1:
-                # if user.language_code == "ru":
-                bot.send_message(id, "Ничего не найдено")
-            # else:
-            # bot.send_message(id, "Not found")
-            else:
-                size_N = len(book)
-                read = tools.how_much_read(pos, size_N, shift)
-                end_pos = pos + shift
-                text = book[pos: end_pos] + "\n" + read
-                bot.send_message(id, text)
-                sql.update(id=id, field="position", value=end_pos)
+    phrase = message.text
+    text = book_parser.set_page_by_phrase(id, phrase)
+    bot.send_message(id, text)
 
 
 def show_state(message):
     id = message.chat.id
-    isOpen, pos, shift, freq = sql.get_data(id)
-    if isOpen == 1:
-        path = tools.get_current_path(id)
-        book = tools.get_book(path)
-        size_N = len(book)
-        per = pos / size_N * 100
-
-        pages_read = tools.how_much_read(pos, size_N, shift)
-        percent = tools.how_much_percent_read(pos, size_N)
-
-        bot.send_message(id, "Прочитано: " + percent + " %, или " + pages_read + " стр.")
-        # if user.language_code == "ru":
-        #   bot.send_message(id, "Прочитано: " + percent + " %, или " + pages_read + " стр.")
-        # else:
-        #    bot.send_message(id, "Finished: " + percent + " %, or " + pages_read + " pp.")
-
-    else:
-        bot.send_message(id, "Вы еще не загрузили файл")
-
-
-def set_reminder(message):
-    id = message.chat.id
-    lang = message.from_user.language_code
-    isOpen, pos, shift, freq = sql.get_data(id)
-
-   # if lang == 'ru':
-   #     imarkup = types.InlineKeyboardMarkup(row_width=2)
-   #     b1 = types.InlineKeyboardButton("1 day", callback_data="help")
-   #     b2 = types.InlineKeyboardButton("12 hours", callback_data="state")
-   #     imarkup.add(b1, b2)
-   #     bot.send_message(id, "Как частно присылать фрагмент", parse_mode='HTML', reply_markup=imarkup)
-   # else:
-
-    imarkup = types.InlineKeyboardMarkup(row_width=2)
-    b1 = types.InlineKeyboardButton("1 day", callback_data="freq 86400")
-    b2 = types.InlineKeyboardButton("12 hours", callback_data="freq 43200")
-    b3 = types.InlineKeyboardButton("8 hours", callback_data="freq 28800")
-    b4 = types.InlineKeyboardButton("4 hours", callback_data="freq 14400")
-    b5 = types.InlineKeyboardButton("2 hours", callback_data="freq 7200")
-    b6 = types.InlineKeyboardButton("1 hour", callback_data="freq 3600")
-    imarkup.add(b1, b2, b3, b4, b5, b6)
-    bot.send_message(id, "How often would you like to get a text?", parse_mode='HTML', reply_markup=imarkup)
-
+    text = book_parser.show_state(id)
+    bot.send_message(id, text)
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -317,29 +208,28 @@ def callback_handler(call):
 
     if call.data == 'page_number':
         ru, eng = "Введите номер страницы", "Enter the page number"
-        bot.send_message(id, {True: ru, False: eng} [lang == 'ru'])
+        bot.send_message(id, {True: ru, False: eng}[lang == 'ru'])
         bot.register_next_step_handler(mes, set_page_number)
     if call.data == 'page_size':
         ru, eng = "Введи размер страницы в символах, не более 4000", "Enter the page size, not more 4000 symbols"
-        bot.send_message(id, {True: ru, False: eng} [lang == 'ru'])
+        bot.send_message(id, {True: ru, False: eng}[lang == 'ru'])
         bot.register_next_step_handler(mes, set_page_size)
     if call.data == 'find_phrase':
         ru, eng = "Введите искомую фразу", "Enter the phrase to look for"
-        bot.send_message(id, {True: ru, False: eng} [lang == 'ru'])
+        bot.send_message(id, {True: ru, False: eng}[lang == 'ru'])
         bot.register_next_step_handler(mes, set_page_by_phrase)
     if call.data == "state":
         show_state(mes)
     if call.data == "help":
         get_help(mes)
     if call.data == "reminder":
-        set_reminder(mes)
+        reminder.set_reminder(bot, mes)
 
     if len(command) > 1:
         if command[0] == "freq":
             freq = int(command[1])
             sql.update(id, field='frequency', value=freq)
             bot.send_message(id, "frequency set to " + str(freq) + " seconds")
-
 
 
 def user_not_found(user, id):
@@ -352,12 +242,11 @@ def user_not_found(user, id):
     else:
         return False
 
-def lang_text(lang, ru, eng):
-    if lang == 'ru':
-        return ru
-    else:
-        return eng
+
+print("new thread")
+thread = Thread(target=reminder.start, args=[bot])
+thread.start()
 
 
-
+print("polling")
 bot.infinity_polling(timeout=10001)
