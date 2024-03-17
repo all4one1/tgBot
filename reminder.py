@@ -22,30 +22,32 @@ def start(bot: telebot.TeleBot):
                 dif = now - last
                 if dif > freq:
                     text = book_parser.next_page(id)
-                    text += "\nIt's reminder!"
+                    add = {True: "\n(Напоминание)", False: "\n (... reminded!)"}[lang=='ru']
+                    text += add
                     bot.send_message(id, text)
 
 
-def set_reminder(bot: telebot.TeleBot, message: types.Message):
+def set_reminder(message: types.Message, bot: telebot.TeleBot):
     id = message.chat.id
-    lang = message.from_user.language_code
     isOpen, pos, shift, freq = sql.get_data(id)
+    lang = sql.get_lang(id)
 
-   # if lang == 'ru':
-   #     imarkup = types.InlineKeyboardMarkup(row_width=2)
-   #     b1 = types.InlineKeyboardButton("1 day", callback_data="help")
-   #     b2 = types.InlineKeyboardButton("12 hours", callback_data="state")
-   #     imarkup.add(b1, b2)
-   #     bot.send_message(id, "Как частно присылать фрагмент", parse_mode='HTML', reply_markup=imarkup)
-   # else:
+    min = lambda s: s * 60
+    hour = lambda s: s * min(60)
+    day = lambda s: s * hour(24)
 
-    imarkup = types.InlineKeyboardMarkup(row_width=2)
-    b1 = types.InlineKeyboardButton("1 day", callback_data="freq 86400")
-    b2 = types.InlineKeyboardButton("12 hours", callback_data="freq 43200")
-    b3 = types.InlineKeyboardButton("8 hours", callback_data="freq 28800")
-    b4 = types.InlineKeyboardButton("4 hours", callback_data="freq 14400")
-    b5 = types.InlineKeyboardButton("2 hours", callback_data="freq 7200")
-    b6 = types.InlineKeyboardButton("1 hour", callback_data="freq 3600")
-    imarkup.add(b1, b2, b3, b4, b5, b6)
-    bot.send_message(id, "How often would you like to get a text?", parse_mode='HTML', reply_markup=imarkup)
+    ru = ["1 неделя", "1 день", "12 часов", "8 часов", "4 часа", "2 часа", "1 час", "Никогда"]
+    en = ["1 week", "1 day", "12 hours", "8 hours", "4 hours", "2 hours", "1 hour", "Never"]
+    text = {True: ru, False: en}[lang == 'ru']
+    values = [day(7), day(1), hour(12), hour(8), hour(4), hour(2), hour(1), 0]
+
+    ls = []
+    for i in range(8):
+        button = types.InlineKeyboardButton(text[i], callback_data=f"freq {values[i]}")
+        ls.append(button)
+
+    imarkup = types.InlineKeyboardMarkup(keyboard=[ls[0:4], ls[4:8]])
+
+    text = {True: "Как часто изволите напоминать?", False: "How often would you like to receive a text?"}[lang == 'ru']
+    bot.send_message(id, text, parse_mode='HTML', reply_markup=imarkup)
 

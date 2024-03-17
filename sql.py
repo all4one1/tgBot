@@ -1,6 +1,7 @@
 import sqlite3
 
 db_name = "userbase.db"
+# userlist = []
 
 
 def create_db():
@@ -29,7 +30,6 @@ def get_data(id):
     return res.fetchone()
 
 
-# TODO: check why return turple is ok here (without [0])
 def get_lang(id):
     con = sqlite3.connect(db_name)
     cur = con.cursor()
@@ -38,7 +38,7 @@ def get_lang(id):
              "FROM user "
              "WHERE id = " + str(id))
     res = cur.execute(query)
-    return res.fetchone()
+    return res.fetchone()[0]
 
 
 # TODO: update and change at once?
@@ -94,6 +94,7 @@ def update_text(id, field, value):
     value_with_quotes = f"'{str(value)}'"
     cur.execute("UPDATE user SET " + field + " = " + value_with_quotes + " WHERE id = " + str(id))
     con.commit()
+    # print("update_text")
 
 
 def create_example_books():
@@ -107,15 +108,6 @@ def create_example_books():
                 "text	TEXT,"
                 "PRIMARY KEY(id))")
 
-
-con = sqlite3.connect(db_name)
-cur = con.cursor()
-value = ""
-with open('example.txt', 'r') as file:
-    value = file.read()
-value_with_quotes = f"'{str(value)}'"
-cur.execute("UPDATE example SET text = " + value_with_quotes + " WHERE id = 1")
-con.commit()
 
 # import os
 # os._exit(0)
