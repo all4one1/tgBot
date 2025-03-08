@@ -108,7 +108,7 @@ def set_example_book(mes: telebot.types.Message, bot: telebot.TeleBot):
     lang = sql.get_lang(id)
     file_id = {True: 1, False: 2}[lang == 'ru']
     save_example_as_current(file_id, id)
-    ru = 'Пример установлен: "Так говорил Заратуштра" - Фридрих Ницше'
+    ru = 'Пример установлен: "Чума" - Альбер Камю'
     en = 'The example book is set: "Strange Case of Dr Jekyll and Mr Hyde" - Robert Louis Stevenson'
 
     bot.send_message(id, {True: ru, False: en}[lang == 'ru'])

@@ -1,7 +1,6 @@
 # TODO:
-#   add examples
-#   check if bot blocked
-#   check if user not active for a long time
+#   check if bot blocked by a user
+#   check if a user is not active for a long time
 #   manual delete of a user
 #   make better file hierarchy
 import telebot

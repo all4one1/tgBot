@@ -14,12 +14,6 @@ def debug(message: types.Message, bot: TeleBot):
     s = ' '.join(res)
     bot.reply_to(message, s)
     lang = sql.get_lang(id)
-    if lang == 'en':
-        sql.update_text(id, field='language', value='ru')
-        bot.send_message(id, "русский")
-    else:
-        sql.update_text(id, field='language', value='en')
-        bot.send_message(id, "english")
 
 
 
