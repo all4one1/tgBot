@@ -1,9 +1,9 @@
-import sql
 from telebot import TeleBot
 from telebot.types import CallbackQuery
-import book_parser
-import base_commands_handler
-import reminder
+from src.modules import book_parser
+from src import sql
+from src.handlers import base_commands_handler
+from src.modules import reminder
 
 
 def callbacks(call: CallbackQuery, bot: TeleBot):

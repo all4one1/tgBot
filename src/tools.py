@@ -5,13 +5,15 @@
 import os
 import sys
 
-import sql
+
+from src import sql
 from datetime import datetime
 from math import ceil
 import telebot
 
 userlist = []
 TOKEN = ""
+rootdir = ""
 
 
 def init():
@@ -128,6 +130,7 @@ def get_token():
     with open('TOKEN.txt', 'r') as file:
         token = file.read()
     return token
+
 
 def user_not_found(id: int, user: telebot.types.User, bot: telebot.TeleBot):
     if not (id in userlist):

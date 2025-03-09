@@ -1,9 +1,7 @@
 import telebot
-import get_example
-import base_commands_handler
-import document_handler
-import text_handler
-import callback_handler
+from src.modules import get_example
+from src.handlers import base_commands_handler, document_handler, callback_handler
+from src.handlers import text_handler
 
 
 def register_all(bot: telebot.TeleBot):

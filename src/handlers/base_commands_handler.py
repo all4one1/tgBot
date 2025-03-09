@@ -1,7 +1,7 @@
 from telebot import TeleBot
 from telebot import types
-import sql
-import tools
+from src import sql
+from src import tools
 import os
 
 # TODO: more flexible commands for my usage
@@ -26,7 +26,8 @@ def check(message: types.Message, bot: TeleBot):
     # bot.send_sticker(message.from_user.id, tools.sp.get_i(0))
 
 
-
+# TODO : if, for any reason, a folder with a user does not exist,
+#  but a user exists in the database, then there will be a trouble
 def start(message: types.Message, bot: TeleBot):
     user = message.from_user
     id = user.id

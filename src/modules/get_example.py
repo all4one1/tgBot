@@ -1,9 +1,9 @@
 import sqlite3
 from pathlib import Path
 
-import sql
-import tools
-from sql import update
+from src import sql
+from src import tools
+from src.sql import update
 import telebot
 
 example_db_name = "example.db"

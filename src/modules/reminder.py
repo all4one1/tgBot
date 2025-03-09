@@ -1,9 +1,10 @@
+
+
 import time
 import telebot
 from telebot import types
-import sql
-import book_parser
-import tools
+from src import sql
+from src.modules import book_parser
 
 
 def start(bot: telebot.TeleBot):

@@ -1,5 +1,5 @@
-import tools
-import sql
+from src import tools
+from src import sql
 import urllib.request
 from telebot import TeleBot
 from telebot.types import Message

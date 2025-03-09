@@ -1,10 +1,12 @@
 import telebot
 
-import tools
-import sql
+from src import tools
+from src import sql
 from telebot import TeleBot
 from telebot import types
-import book_parser
+from src.handlers import buttons
+from src.modules import book_parser
+
 
 # TODO: do not proceed if one function is invoked (i.e. one condition is satisfied)
 def process_any_text(message: types.Message, bot: TeleBot):
@@ -17,44 +19,13 @@ def process_any_text(message: types.Message, bot: TeleBot):
 
     # pressed buttons generate a text message
     # then it is processed by the next functions
-    if button_menu(bot, id, lang, splitted_text):
+    if buttons.button_menu(bot, id, lang, splitted_text):
         return
-    if button_next(bot, id, lang, splitted_text):
+    if buttons.button_next(bot, id, lang, splitted_text):
         return
 
     why_reading(bot, id, lang, message.text)
 
-
-def button_menu(bot: TeleBot, id: int, lang: str, splitted_text: list[str]):
-    menu_list = ["Меню", "меню", "Menu", "menu"]
-
-    # Inline Buttons here
-    if any(x in splitted_text for x in menu_list):
-        ru = ["Перейти на страницу", "Изменить размер страницы", "Найти фразу", "Прогресс", "Помощь",
-              "Включить напоминания"]
-        en = ["Change page number", "Change page size", "Looking for a phrase", "Progress", "Help",
-              "Switch on reminder"]
-        data = ["page_number", "page_size", "find_phrase", "state", "help", "reminder"]
-        text = {True: ru, False: en}[lang == 'ru']
-
-        imarkup = types.InlineKeyboardMarkup(row_width=1)
-        for i in range(6):
-            b = types.InlineKeyboardButton(text[i], callback_data=data[i])
-            imarkup.add(b)
-
-        text = {True: "Возможности читалки", False: "What I can do"}[lang == 'ru']
-        bot.send_message(id, text, parse_mode='HTML', reply_markup=imarkup)
-        return True
-    return False
-
-
-def button_next(bot: TeleBot, id: int, lang: str, splitted_text: list[str]):
-    next_list = ["Далее", "далее", "Next", "next"]
-    if any(x in splitted_text for x in next_list):
-        text = book_parser.next_page(id)
-        bot.send_message(id, text)
-        return True
-    return False
 
 def why_reading(bot: TeleBot, id: int, lang: str, text: str):
     why_list = ["зачем читать", "читать зачем", "зачем надо читать", "зачем читать надо",

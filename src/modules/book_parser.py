@@ -1,6 +1,6 @@
 import time
-import tools
-import sql
+from src import tools
+from src import sql
 from telebot import TeleBot
 from telebot.types import Message
 
